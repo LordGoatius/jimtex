@@ -1,0 +1,9 @@
+[package]
+name = "jimtex"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.76"
+authors = ["Jimmy Ostler jtostler@gmail.com"]
+description = "A programming language made to be compiled to LaTeX and displayed as LaTeX in the JimTeX IDE"
+
+[dependencies]
