@@ -1,3 +1,11 @@
+pub mod config;
+pub mod app;
+
+use config::Config;
+
+use clap::Parser;
+
 fn main() {
-    println!("Hello, world!");
+    let config = Config::parse();
+    app::run(config);
 }

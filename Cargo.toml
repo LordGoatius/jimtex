@@ -7,3 +7,5 @@ authors = ["Jimmy Ostler jtostler@gmail.com"]
 description = "A programming language made to be compiled to LaTeX and displayed as LaTeX in the JimTeX IDE"
 
 [dependencies]
+clap = { version = "4.5.3", features = ["derive"] }
+jimtex_interpreter = { path = "jimtex_interpreter" }
