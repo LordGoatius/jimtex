@@ -1,13 +1,19 @@
 pub mod lexer;
+pub mod parser;
 
 #[cfg(test)]
 mod tests {
     use std::path::Path;
 
-    use crate::lexer::{self, lex};
+    use crate::lexer::lex;
 
     #[test]
-    fn it_works() {
+    fn test_hm() {
         lex(Path::new("/home/lordgoatius/git/jimtex/jimtex_interpreter/src/test_file.tex"));
+    }
+
+    #[test]
+    fn test_combinations() {
+        lex(Path::new("/home/lordgoatius/git/jimtex/jimtex_interpreter/src/new_test.tex"))
     }
 }
