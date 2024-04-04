@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GreekLetters {
     Alpha,
     Beta,
@@ -44,7 +44,7 @@ pub enum GreekLetters {
     // TODO Add more
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinOps {
     PlusMinus,
     SetDifference,
@@ -60,14 +60,14 @@ pub enum BinOps {
     // TODO Add more
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnOps {
     Negation,
     BoolNot
     // TODO Add more
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Conditionals {
     Equals,
     Approx,
@@ -82,7 +82,7 @@ pub enum Conditionals {
     // TODO Add more
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statements {
     Equivalent,
     Similar,
@@ -99,7 +99,7 @@ pub enum Statements {
     NotIn,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Loops {
     Forall,
     Sum,

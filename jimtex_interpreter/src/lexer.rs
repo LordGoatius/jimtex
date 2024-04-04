@@ -1,7 +1,7 @@
 use std::{char, fs, path::Path};
 use crate::{ast::{BinOps, Conditionals, GreekLetters, Loops, Statements, UnOps}, parser::{Command, NewCommand}};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Tab,
     Colon,
@@ -109,7 +109,6 @@ pub fn lex(input: &Path) -> TokenString {
             '/'  => token_string.push(Token::Operator(Operator::Div)),
             '#'  => token_string.push(Token::Octothorpe),
             '\\' => {
-                //match input.clone().chars().nth(i + 1).unwrap_or_default() {
                 match input_vec.get(i+1).copied().unwrap_or_default() {
                     '\\'=> { token_string.push(Token::NewlineOperator); ignore += 1; }
                     // JimTeX/LaTeX/TeX inline/display
@@ -148,8 +147,20 @@ pub fn lex(input: &Path) -> TokenString {
             char => {
                 if char.is_ascii_digit() {
                     num_vec.push(char);
+                    if text_vec.len() > 0 {
+                        let prev: Token = token_string.pop().expect("Should be impossible");
+                        token_string.push(Token::Text(text_vec.iter().collect::<String>()));
+                        token_string.push(prev);
+                        text_vec = vec![];
+                    }
                 } else {
                     text_vec.push(char);
+                    if num_vec.len() > 0 {
+                        let prev: Token = token_string.pop().expect("Should be impossible");
+                        token_string.push(Token::Number(num_vec.iter().collect::<String>()));
+                        token_string.push(prev);
+                        num_vec = vec![];
+                    }
                 }
                 continue;
             }

@@ -4,10 +4,10 @@ use crate::ast::*;
 // TODO:
 // Parse commands options ({},[])
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Command {
     name: String,
-    required: TokenString,
+    req: TokenString,
     opt: TokenString
 }
 
@@ -21,7 +21,7 @@ pub enum Environment {
     Matrix
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NewCommand {
     cmd:  Command,
     args: u8,
@@ -65,13 +65,118 @@ fn command_option_parser(tokens: TokenString) -> TokenString {
             continue;
         }
 
-        if let Token::CommandStub(text) = token {
+        if let Token::CommandStub(name) = token {
+            let mut opt: TokenString = vec![];
+            let mut req: TokenString = vec![];
+            if token_ref.get(i + 1) == Some(&Token::LeftBrace) {
+                let mut balanced = 1;
+                let mut count = 1;
+
+                while balanced > 0 {
+                    match token_ref.get(i + count + 1) {
+                        Some(&Token::LeftBrace)  => balanced += 1,
+                        Some(&Token::RightBrace) => balanced -= 1,
+                        None => break,
+                        _ => (),
+                    }
+                    count += 1;
+                }
+
+                ignore += count;
+
+                for j in (i+2)..(i+count) {
+                    req.push(token_ref[j].clone());
+                }
+
+                if token_ref.get(i + count + 1) == Some(&Token::LeftBracket) {
+                    let mut balanced_1 = 1;
+                    let mut count_1 = 1;
+
+                    while balanced_1 > 0 {
+                        match token_ref.get(i + count + count_1 + 1) {
+                            Some(&Token::LeftBracket)  => balanced_1 += 1,
+                            Some(&Token::RightBracket) => balanced_1 -= 1,
+                            None => break,
+                            _ => (),
+                        }
+                        count_1 += 1;
+                    }
+
+                    ignore += count_1;
+
+                    for k in (i+count+2)..(i+count+count_1) {
+                        opt.push(token_ref[k].clone());
+                    }
+                }
+            } else if token_ref.get(i + 1) == Some(&Token::LeftBracket) {
+                let mut balanced = 1;
+                let mut count = 1;
+
+                while balanced > 0 {
+                    match token_ref.get(i + count + 1) {
+                        Some(&Token::LeftBracket)  => balanced += 1,
+                        Some(&Token::RightBracket) => balanced -= 1,
+                        None => break,
+                        _ => (),
+                    }
+                    count += 1;
+                }
+
+                ignore += count;
+
+                for j in (i+2)..(i+count) {
+                    opt.push(token_ref[j].clone());
+                }
+
+                if token_ref.get(i + count + 1) == Some(&Token::LeftBrace) {
+                    let mut balanced_1 = 1;
+                    let mut count_1 = 1;
+
+                    while balanced_1 > 0 {
+                        match token_ref.get(i + count + count_1 + 1) {
+                            Some(&Token::LeftBrace)  => balanced_1 += 1,
+                            Some(&Token::RightBrace) => balanced_1 -= 1,
+                            None => break,
+                            _ => (),
+                        }
+                        count_1 += 1;
+                    }
+
+                    ignore += count_1;
+
+                    for k in (i+count+2)..(i+count+count_1) {
+                        req.push(token_ref[k].clone());
+                    }
+                }
+            } else {
+            }
+            ret_vec.push(Token::Command(Command { name, req: command_option_parser(req), opt: command_option_parser(opt)}))
 
         } else {
             ret_vec.push(token);
         }
     }
     ret_vec
+}
+
+fn filter_what_gets_interpreted(tokens: TokenString) -> TokenString {
+    let mut ret = vec![];
+
+    let mut in_extex_envmt = false;
+    let mut comment = false;
+
+    for token in tokens.into_iter() {
+        if in_extex_envmt && !comment {
+            ret.push(token.clone());
+        }
+
+        /**/ if token == Token::OpenCodeInline || token == Token::OpenCodeDisplay { in_extex_envmt = true; }
+        else if token == Token::CloseCodeInline || token == Token::CloseCodeDisplay { in_extex_envmt = false; }
+        else if token == Token::Percent { comment = true; }
+        else if token == Token::Newline { comment = false; }
+    }
+
+    ret
 }
 
 fn parse_cmd_stub(token: Token) -> Token {
@@ -176,5 +281,12 @@ fn parse_cmd_stub(token: Token) -> Token {
 
 pub fn parse(tokens: TokenString) {
     let tokens = make_commands(tokens);
+    let tokens = command_option_parser(tokens);
+    let tokens = filter_what_gets_interpreted(tokens);
+    //let tokens = tokens.into_iter().map(|token| if let Token::Command(cmd) = token {
+    //    Token::Command(Command { name: cmd.name, req: command_option_parser(cmd.req), opt: command_option_parser(cmd.opt) })
+    //} else {
+    //    token
+    //}).collect::<TokenString>();
     eprintln!("{tokens:?}");
 }
