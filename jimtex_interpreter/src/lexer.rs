@@ -1,46 +1,66 @@
 use std::{char, fs, path::Path};
+use crate::{ast::{BinOps, Conditionals, GreekLetters, Loops, Statements, UnOps}, parser::{Command, NewCommand}};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub enum Token {
-    Dollar,
-    Backslash,
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    LeftBracket,
-    RightBracket,
-    Period,
-    Comma,
-    Equals,
+    Tab,
     Colon,
-    Exponent,
-    Subscript,
-    Percent,
-    Newline,
+    Comma,
     Space,
-    FormatDollar,
-    FormatDoubleDollar,
+    Dollar,
+    Equals,
+    Period,
+    Newline,
+    Percent,
+    Exponent,
+    Backslash,
+    LeftBrace,
+    LeftParen,
+    Subscript,
+    Octothorpe,
     OpenInline,
-    OpenDisplay,
+    RightBrace,
+    RightParen,
     CloseInline,
+    LeftBracket,
+    OpenDisplay,
     CloseDisplay,
+    FormatDollar,
+    RightBracket,
     OpenCodeInline,
-    OpenCodeDisplay,
     CloseCodeInline,
+    NewlineOperator,
+    OpenCodeDisplay,
     CloseCodeDisplay,
-    Operator(Operator),
+    EscapedLeftBrace,
+    EscapedOctothorpe,
+    EscapedRightBrace,
+    FormatDoubleDollar,
+
     Text(String),
     Number(String),
+    Operator(Operator),
 
     RealNumbers,
     NatrualNumbers,
     ComplexNumbers,
     RationalNumbers,
     Integers,
+
+    // PARSER TOKENS ONLY
+    CommandStub(String),
+    Command(Command),
+    NewCommand(NewCommand),
+
+    GreekLetter(GreekLetters),
+    BinOp(BinOps),
+    UnOps(UnOps),
+    Conditional(Conditionals),
+    Statement(Statements),
+    Loop(Loops),
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum Operator {
     Mul,
     Div,
@@ -48,22 +68,26 @@ pub enum Operator {
     Sub,
 }
 
-pub fn lex(input: &Path) {
+pub type TokenString = Vec<Token>;
+
+pub fn lex(input: &Path) -> TokenString {
     let input: String = fs::read_to_string(input).expect("Invalid file");
 
     let mut token_string: Vec<Token> = vec![];
+    let input_vec: Vec<char> = input.clone().chars().collect();
 
     let mut text_vec: Vec<char> = vec![];
     let mut num_vec:  Vec<char> = vec![];
 
     let mut ignore = 0;
 
-    for (i, char) in input.clone().chars().enumerate() {
+    for (i, char) in input.chars().enumerate() {
         if ignore > 0 {
             ignore -= 1;
             continue;
         }
         match char {
+            '\t' => token_string.push(Token::Tab),
             ','  => token_string.push(Token::Comma),
             ':'  => token_string.push(Token::Comma),
             ' '  => token_string.push(Token::Space),
@@ -83,20 +107,25 @@ pub fn lex(input: &Path) {
             '-'  => token_string.push(Token::Operator(Operator::Sub)),
             '*'  => token_string.push(Token::Operator(Operator::Mul)),
             '/'  => token_string.push(Token::Operator(Operator::Div)),
+            '#'  => token_string.push(Token::Octothorpe),
             '\\' => {
-                match input.clone().chars().nth(i + 1).unwrap_or_default() {
-                    // JimTeX/LaTeX/TeX inline/displat
+                //match input.clone().chars().nth(i + 1).unwrap_or_default() {
+                match input_vec.get(i+1).copied().unwrap_or_default() {
+                    '\\'=> { token_string.push(Token::NewlineOperator); ignore += 1; }
+                    // JimTeX/LaTeX/TeX inline/display
                     '(' => { token_string.push(Token::OpenInline);   ignore += 1; },
                     '[' => { token_string.push(Token::OpenDisplay);  ignore += 1; },
                     ')' => { token_string.push(Token::CloseInline);  ignore += 1; },
-                    ']' => { token_string.push(Token::CloseDisplay); ignore += 1; },
+                    ']' => { token_string.push(Token::CloseDisplay);  ignore += 1; },
+                    '{' => { token_string.push(Token::EscapedLeftBrace); ignore += 1; },
+                    '}' => { token_string.push(Token::EscapedRightBrace); ignore += 1; },
+                    '#' => { token_string.push(Token::EscapedOctothorpe); ignore += 1; },
                     '$' => {
-                        match input.clone().chars().nth(i + 2).unwrap_or_default() {
+                        match input_vec.get(i+2).copied().unwrap_or_default() {
                             '(' => { token_string.push(Token::OpenCodeInline);   ignore += 1; },
                             '[' => { token_string.push(Token::OpenCodeDisplay);  ignore += 1; },
                             ')' => { token_string.push(Token::CloseCodeInline);  ignore += 1; },
                             ']' => { token_string.push(Token::CloseCodeDisplay); ignore += 1; },
-                            '$' => { token_string.push(Token::Dollar); token_string.push(Token::Dollar); ignore += 1; },
                             _   => token_string.push(Token::Dollar),
                         }
                         ignore += 1;
@@ -111,7 +140,7 @@ pub fn lex(input: &Path) {
                 }
             },
             '$' => {
-                match input.clone().chars().nth(i + 1).unwrap_or_default() {
+                match input_vec.get(i+1).copied().unwrap_or_default() {
                     '$' => { token_string.push(Token::FormatDoubleDollar); ignore += 1; },
                     _   => token_string.push(Token::FormatDollar),
                 }
@@ -138,5 +167,5 @@ pub fn lex(input: &Path) {
             num_vec = vec![];
         }
     }
-    eprintln!("{:?}", token_string);
+    token_string
 }
