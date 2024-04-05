@@ -7,8 +7,8 @@ use crate::ast::*;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Command {
     name: String,
-    req: TokenString,
-    opt: TokenString
+    req: Vec<TokenString>,
+    opt: Vec<TokenString>
 }
 
 pub enum Environment {
@@ -54,6 +54,49 @@ fn make_commands(tokens: TokenString) -> TokenString {
     ret_vec.into_iter().map(|token| parse_cmd_stub(token)).collect()
 }
 
+fn find_inner_string_req(token_str: &TokenString, begin: usize) -> (usize, TokenString) {
+    let mut offset   = 1;
+    let mut balanced = 1;
+
+    while balanced > 0 {
+        match token_str.get(begin + offset) {
+            Some(Token::LeftBrace)  => balanced += 1,
+            Some(Token::RightBrace) => balanced -= 1,
+            _ => (),
+        }
+        offset += 1;
+    }
+    (offset, token_str[(begin+1)..(begin+offset-1)].iter().map(|token| token.clone()).collect())
+}
+
+fn find_inner_string_opt(token_str: &TokenString, begin: usize) -> (usize, TokenString) {
+    let mut offset   = 1;
+    let mut balanced = 1;
+
+    while balanced > 0 {
+        match token_str.get(begin + offset) {
+            Some(Token::LeftBracket)  => balanced += 1,
+            Some(Token::RightBracket) => balanced -= 1,
+            _ => (),
+        }
+        offset += 1;
+    }
+    (offset, token_str[(begin+1)..(begin+offset-1)].iter().map(|token| token.clone()).collect())
+}
+
+enum TypeArg {
+    Opt,
+    Req
+}
+
+fn find_inner_string(token_str: &TokenString, begin: usize) -> Option<((usize, TokenString), TypeArg)> {
+    match token_str.get(begin) {
+        Some(Token::LeftBracket) => Some((find_inner_string_opt(token_str, begin), TypeArg::Opt)),
+        Some(Token::LeftBrace)   => Some((find_inner_string_req(token_str, begin), TypeArg::Req)),
+        _ => None,
+    }
+}
+
 fn command_option_parser(tokens: TokenString) -> TokenString {
     let mut ret_vec = vec![];
     let mut ignore = 0;
@@ -66,91 +109,24 @@ fn command_option_parser(tokens: TokenString) -> TokenString {
         }
 
         if let Token::CommandStub(name) = token {
-            let mut opt: TokenString = vec![];
-            let mut req: TokenString = vec![];
-            if token_ref.get(i + 1) == Some(&Token::LeftBrace) {
-                let mut balanced = 1;
-                let mut count = 1;
+            let mut opt: Vec<TokenString> = vec![];
+            let mut req: Vec<TokenString> = vec![];
+            let mut offset_outer = i + 1;
 
-                while balanced > 0 {
-                    match token_ref.get(i + count + 1) {
-                        Some(&Token::LeftBrace)  => balanced += 1,
-                        Some(&Token::RightBrace) => balanced -= 1,
-                        None => break,
-                        _ => (),
-                    }
-                    count += 1;
+            while let Some(((offset, args), arg_type)) = find_inner_string(&token_ref, offset_outer) {
+                ignore += offset;
+                offset_outer += offset;
+                match arg_type {
+                    TypeArg::Req => req.push(args),
+                    TypeArg::Opt => opt.push(args),
                 }
-
-                ignore += count;
-
-                for j in (i+2)..(i+count) {
-                    req.push(token_ref[j].clone());
-                }
-
-                if token_ref.get(i + count + 1) == Some(&Token::LeftBracket) {
-                    let mut balanced_1 = 1;
-                    let mut count_1 = 1;
-
-                    while balanced_1 > 0 {
-                        match token_ref.get(i + count + count_1 + 1) {
-                            Some(&Token::LeftBracket)  => balanced_1 += 1,
-                            Some(&Token::RightBracket) => balanced_1 -= 1,
-                            None => break,
-                            _ => (),
-                        }
-                        count_1 += 1;
-                    }
-
-                    ignore += count_1;
-
-                    for k in (i+count+2)..(i+count+count_1) {
-                        opt.push(token_ref[k].clone());
-                    }
-                }
-            } else if token_ref.get(i + 1) == Some(&Token::LeftBracket) {
-                let mut balanced = 1;
-                let mut count = 1;
-
-                while balanced > 0 {
-                    match token_ref.get(i + count + 1) {
-                        Some(&Token::LeftBracket)  => balanced += 1,
-                        Some(&Token::RightBracket) => balanced -= 1,
-                        None => break,
-                        _ => (),
-                    }
-                    count += 1;
-                }
-
-                ignore += count;
-
-                for j in (i+2)..(i+count) {
-                    opt.push(token_ref[j].clone());
-                }
-
-                if token_ref.get(i + count + 1) == Some(&Token::LeftBrace) {
-                    let mut balanced_1 = 1;
-                    let mut count_1 = 1;
-
-                    while balanced_1 > 0 {
-                        match token_ref.get(i + count + count_1 + 1) {
-                            Some(&Token::LeftBrace)  => balanced_1 += 1,
-                            Some(&Token::RightBrace) => balanced_1 -= 1,
-                            None => break,
-                            _ => (),
-                        }
-                        count_1 += 1;
-                    }
-
-                    ignore += count_1;
-
-                    for k in (i+count+2)..(i+count+count_1) {
-                        req.push(token_ref[k].clone());
-                    }
-                }
-            } else {
             }
-            ret_vec.push(Token::Command(Command { name, req: command_option_parser(req), opt: command_option_parser(opt)}))
+
+            ret_vec.push(Token::Command(Command { 
+                name, 
+                req: req.into_iter().map(|tk_str| command_option_parser(tk_str)).collect(), 
+                opt: opt.into_iter().map(|tk_str| command_option_parser(tk_str)).collect()
+            }));
 
         } else {
             ret_vec.push(token);
@@ -283,10 +259,5 @@ pub fn parse(tokens: TokenString) {
     let tokens = make_commands(tokens);
     let tokens = command_option_parser(tokens);
     let tokens = filter_what_gets_interpreted(tokens);
-    //let tokens = tokens.into_iter().map(|token| if let Token::Command(cmd) = token {
-    //    Token::Command(Command { name: cmd.name, req: command_option_parser(cmd.req), opt: command_option_parser(cmd.opt) })
-    //} else {
-    //    token
-    //}).collect::<TokenString>();
-    eprintln!("{tokens:?}");
+    eprintln!("{tokens:#?}");
 }
