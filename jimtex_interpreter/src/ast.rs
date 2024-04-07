@@ -83,6 +83,14 @@ pub enum Conditionals {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum SetOps {
+    Union,
+    Intersection,
+    SetDifference,
+    // Complement is unary
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statements {
     Equivalent,
     Similar,

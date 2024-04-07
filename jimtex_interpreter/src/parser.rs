@@ -108,6 +108,7 @@ fn command_option_parser(tokens: TokenString) -> TokenString {
             continue;
         }
 
+        // Of form \command => Token::CommandStub(name)
         if let Token::CommandStub(name) = token {
             let mut opt: Vec<TokenString> = vec![];
             let mut req: Vec<TokenString> = vec![];
@@ -259,5 +260,5 @@ pub fn parse(tokens: TokenString) {
     let tokens = make_commands(tokens);
     let tokens = command_option_parser(tokens);
     let tokens = filter_what_gets_interpreted(tokens);
-    eprintln!("{tokens:#?}");
+    eprintln!("{tokens:?}");
 }

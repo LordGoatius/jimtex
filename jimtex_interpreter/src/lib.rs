@@ -1,6 +1,8 @@
 pub mod lexer;
 pub mod parser;
 pub mod ast;
+pub mod parser_ast;
+pub mod ast_types;
 
 #[cfg(test)]
 mod tests {
