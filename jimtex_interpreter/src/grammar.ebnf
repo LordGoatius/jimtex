@@ -72,7 +72,7 @@ numbers    = {0-9} ;
 
 greek_letter = greek letter ;
 
-program = { statement, "," }, statement ;
+program = statement, { statement, "," } ;
 
 statement = function_definition
           | function_declaration
@@ -107,7 +107,7 @@ value = number, { number }
       | function_ident, rightparen, { value }, leftparen ;
 
 (* all identifiers must represent valud sets *)
-set_declaration = identifier, "=", leftparen, value, { value }, rightparen 
+set_declaration = identifier, "=", leftparen, value, { ",", value }, rightparen 
                 | identifier, { "\union", identifier }
                 | identifier, { "\inter", identifier } ;
 

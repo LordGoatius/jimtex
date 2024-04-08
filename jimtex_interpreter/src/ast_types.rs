@@ -2,57 +2,66 @@ use num::{BigInt, BigRational};
 
 use crate::ast::{BinOps, Conditionals, GreekLetters, SetOps, UnOps};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    program: Vec<Statement>,
+    pub program: Vec<Statement>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
-    Value(Value),
     Expression(Expression),
     Conditional(Condition),
     Declaration(Declaration),
     FunctionDefinition(FunctionDefinition),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Number(Number),
     Expression(Box<Expression>),
     Identifier(Identifier),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     FunctionCall(FunctionCall),
     UnaryOperation(UnaryOperation),
     BinaryOperation(BinaryOperation),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnaryOperation {
-    unop: UnOps,
-    value: Value,
+    pub unop: UnOps,
+    pub value: Value,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinaryOperation {
-    value_1: Value,
-    binop:   BinOps,
-    value_2: Value,
+    pub value_1: Value,
+    pub binop:   BinOps,
+    pub value_2: Value,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
-    function: Identifier,
-    args: Vec<Value>,
+    pub function: Identifier,
+    pub args: Vec<Value>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Identifier {
     GreekLetter(GreekLetters),
     TextIdent(String),
     SubScriptIdent(Box<SubScriptIdent>),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct SubScriptIdent {
-    first_ident: Identifier,
-    secnd_ident: Identifier,
+    pub first_ident: Identifier,
+    pub secnd_ident: Identifier,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Number {
     Integer(BigInt),
     Real(f64),
@@ -60,34 +69,40 @@ pub enum Number {
     Rational(BigRational),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Complex {
-    real: f64,
-    imag: f64,
+    pub real: f64,
+    pub imag: f64,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Condition {
-    value_1: Value,
-    condition: Conditionals,
-    value_2: Value,
+    pub value_1: Value,
+    pub condition: Conditionals,
+    pub value_2: Value,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
     FunctionDeclaration(FunctionDeclaration),
     ValueDeclaration(ValueDeclaration),
     SetDeclaration(SetDeclaration),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
-    identifier: Identifier,
-    domain: Number,
-    codomain: Number,
+    pub identifier: Identifier,
+    pub domain: Number,
+    pub codomain: Number,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ValueDeclaration {
-    identifier: Identifier,
-    value: Value,
+    pub identifier: Identifier,
+    pub value: Value,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum SetDeclaration {
     // I'll do set comprehension later, that's hard to do :(
     // I'd wanto do that functional style, and I'd need an iterator system
@@ -95,17 +110,20 @@ pub enum SetDeclaration {
     SetOperations(SetOperations),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ListDeclaration {
-    identifier: Identifier,
-    values: Vec<Value>
+    pub identifier: Identifier,
+    pub values: Vec<Value>
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct SetOperations {
-    operation: SetOps,
-    sets: Vec<Identifier>
+    pub operation: SetOps,
+    pub sets: Vec<Identifier>
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDefinition {
-    identifier: Identifier,
-    expression: Expression
+    pub identifier: Identifier,
+    pub expression: Expression
 }

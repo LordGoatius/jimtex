@@ -256,9 +256,9 @@ fn parse_cmd_stub(token: Token) -> Token {
     }
 }
 
-pub fn parse(tokens: TokenString) {
+pub fn parse(tokens: TokenString) -> TokenString {
     let tokens = make_commands(tokens);
     let tokens = command_option_parser(tokens);
     let tokens = filter_what_gets_interpreted(tokens);
-    eprintln!("{tokens:?}");
+    tokens
 }

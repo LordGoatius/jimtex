@@ -10,6 +10,7 @@ mod tests {
 
     use crate::lexer::lex;
     use crate::parser::parse;
+    use crate::parser_ast::parse_to_ast;
 
     #[test]
     fn test_hm() {
@@ -22,5 +23,13 @@ mod tests {
     fn test_small() {
         let tokens = lex(Path::new("/home/lordgoatius/git/jimtex/jimtex_interpreter/src/small_test.tex"));
         parse(tokens);
+    }
+
+    #[test]
+    fn test_comma_separated() {
+        let tokens = lex(Path::new("/home/lordgoatius/git/jimtex/jimtex_interpreter/src/small_test.tex"));
+        let tokens = parse(tokens);
+        let tokens = parse_to_ast(tokens);
+        println!("{tokens:?}");
     }
 }
