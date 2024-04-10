@@ -46,6 +46,8 @@ pub enum GreekLetters {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinOps {
+    Addition,
+    Subtraction,
     PlusMinus,
     SetDifference,
     Multiply,

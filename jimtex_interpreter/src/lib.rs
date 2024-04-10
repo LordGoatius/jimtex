@@ -1,3 +1,5 @@
+#![feature(slice_split_once)]
+
 pub mod lexer;
 pub mod parser;
 pub mod ast;
@@ -22,7 +24,11 @@ mod tests {
     #[test]
     fn test_small() {
         let tokens = lex(Path::new("/home/lordgoatius/git/jimtex/jimtex_interpreter/src/small_test.tex"));
-        parse(tokens);
+        println!("{tokens:#?}");
+        let tokens = parse(tokens);
+        println!("{tokens:#?}");
+        let tokens = parse_to_ast(tokens);
+        println!("{tokens:#?}");
     }
 
     #[test]

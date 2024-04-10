@@ -1,5 +1,5 @@
 use num::{BigInt, BigRational};
-
+use crate::lexer::Token;
 use crate::ast::{BinOps, Conditionals, GreekLetters, SetOps, UnOps};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -10,7 +10,6 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Expression(Expression),
-    Conditional(Condition),
     Declaration(Declaration),
     FunctionDefinition(FunctionDefinition),
 }
@@ -24,6 +23,7 @@ pub enum Value {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
+    Value(Box<Value>),
     FunctionCall(FunctionCall),
     UnaryOperation(UnaryOperation),
     BinaryOperation(BinaryOperation),
@@ -70,6 +70,12 @@ pub enum Number {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Real {
+    pub int_part: BigInt,
+    pub decimal_part: BigInt,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Complex {
     pub real: f64,
     pub imag: f64,
@@ -92,8 +98,8 @@ pub enum Declaration {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
     pub identifier: Identifier,
-    pub domain: Number,
-    pub codomain: Number,
+    pub domain: Token,
+    pub codomain: Token,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -125,5 +131,6 @@ pub struct SetOperations {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDefinition {
     pub identifier: Identifier,
+    pub arguments:  Vec<Identifier>,
     pub expression: Expression
 }

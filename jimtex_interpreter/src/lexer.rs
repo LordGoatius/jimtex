@@ -58,6 +58,9 @@ pub enum Token {
     Conditional(Conditionals),
     Statement(Statements),
     Loop(Loops),
+    RightArrow,
+
+    Real(f64),
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -89,7 +92,7 @@ pub fn lex(input: &Path) -> TokenString {
         match char {
             '\t' => token_string.push(Token::Tab),
             ','  => token_string.push(Token::Comma),
-            ':'  => token_string.push(Token::Comma),
+            ':'  => token_string.push(Token::Colon),
             ' '  => token_string.push(Token::Space),
             '.'  => token_string.push(Token::Period),
             '='  => token_string.push(Token::Equals),

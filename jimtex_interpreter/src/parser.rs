@@ -249,6 +249,10 @@ fn parse_cmd_stub(token: Token) -> Token {
                 "ifin"       => Token::Conditional(Conditionals::In),
                 "ifnin"      => Token::Conditional(Conditionals::NotIn),
 
+                // SYMBOLS
+                
+                "rightarrow" => Token::RightArrow,
+
                 default      => Token::CommandStub(default.to_owned()),
             }
         }
@@ -260,5 +264,5 @@ pub fn parse(tokens: TokenString) -> TokenString {
     let tokens = make_commands(tokens);
     let tokens = command_option_parser(tokens);
     let tokens = filter_what_gets_interpreted(tokens);
-    tokens
+    tokens.into_iter().filter(|token| *token != Token::Space && *token != Token::Newline && *token != Token::CloseCodeDisplay).collect::<TokenString>()
 }
