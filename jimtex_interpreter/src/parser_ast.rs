@@ -1,17 +1,14 @@
-use num::pow::Pow;
-
 use crate::lexer::{Operator, Token, TokenString};
 use crate::ast::*;
 use crate::ast_types::*;
 
 pub fn parse_to_ast(tokens: TokenString) -> Program {
-    println!("{tokens:?}");
     let mut program = vec![];
     for slice in into_slices(tokens) {
-        println!("Slice: {slice:?}");
         match slice_type(&slice) {
            SliceType::Declaration        => program.push(Statement::Declaration(parse_declaration(slice))),
            SliceType::FunctionDefinition => program.push(Statement::FunctionDefinition(parse_function_def(slice))),
+           SliceType::Expression         => program.push(Statement::Expression(parse_expression(slice))),
         }
     }
 
@@ -25,14 +22,17 @@ fn slice_type(tokens: &TokenString) -> SliceType {
         } else {
             SliceType::Declaration
         }
-    } else { 
+    } else if tokens.contains(&Token::Colon) {
         SliceType::Declaration 
+    } else {
+        SliceType::Expression
     }
 }
 
 enum SliceType {
     Declaration,
     FunctionDefinition,
+    Expression,
 }
 
 fn parse_expression(tokens: TokenString) -> Expression {
@@ -83,9 +83,53 @@ fn precedence(token: Option<&Token>) -> Precedence {
     }
 }
 
+fn make_function_calls(tokens: TokenString) -> TokenString {
+    let mut res: Vec<Token> = vec![];
+    let copy = tokens.clone();
+    let mut ignore = 0;
+
+    for (i, token) in tokens.into_iter().enumerate() {
+        if ignore > 0 {
+            ignore -= 1;
+            continue;
+        }
+        match token {
+            Token::GreekLetter(_)
+            | Token::Text(_) => {
+                if let Some(Token::LeftParen) = copy.get(i+1) {
+                    let mut balanced = 1;
+                    let mut count = 1;
+
+                    while balanced > 0 {
+                        if let Some(Token::RightParen) = copy.get(i+1+count) {
+                            balanced -= 1;
+                        }
+                        count += 1;
+                    }
+
+                    res.push(Token::FunctionCall(FunctionCall { 
+                        function: parse_identifier(vec![token]), 
+                        args: copy.clone()[(i+2)..=(i+count-1)]
+                            .split(|token| *token == Token::Comma)
+                            .map(|slice| parse_value(slice.to_vec()))
+                            .collect()
+                    }));
+                    ignore = count;
+                } else {
+                    res.push(copy[i].clone());
+                }
+            }
+            token => res.push(token),
+        }
+    }
+
+    res
+}
+
 fn parse_value(tokens: TokenString) -> Value {
     let mut res: TokenString = vec![];
     let tokens = make_real_numbers(tokens);
+    let tokens = make_function_calls(tokens);
     // Base cases of number and identifier
     let mut stack: TokenString = vec![];
 
@@ -102,6 +146,9 @@ fn parse_value(tokens: TokenString) -> Value {
             },
             Token::GreekLetter(letter) => {
                 res.push(Token::GreekLetter(letter));
+            },
+            Token::FunctionCall(call) => {
+                res.push(Token::FunctionCall(call));
             },
             //assume identifier
             Token::Operator(_) => {
@@ -165,6 +212,9 @@ fn parse_value(tokens: TokenString) -> Value {
             },
             Token::GreekLetter(letter) => {
                 res_2.push(Value::Identifier(Identifier::GreekLetter(letter)));
+            },
+            Token::FunctionCall(call) => {
+                res_2.push(Value::Expression(Box::new(Expression::FunctionCall(call))));
             },
             //assume identifier
             Token::Operator(operator) => {
@@ -271,6 +321,7 @@ fn make_real_numbers(tokens: TokenString) -> TokenString {
 
 fn parse_function_def(tokens: TokenString) -> FunctionDefinition {
     let (signature, expression) = tokens.split_once(|token| *token == Token::Equals).unwrap();
+    // f(x) = x^2
     let (name, values) = signature.split_once(|token| *token == Token::LeftParen).unwrap();
 
     let name = text_or_greek_to_ident(name
@@ -302,13 +353,12 @@ fn parse_function_def(tokens: TokenString) -> FunctionDefinition {
         .map(|token| text_or_greek_to_ident(token.clone()))
         .collect::<Vec<Identifier>>();
     
-
     // Name must be text or greek letter
 
     FunctionDefinition { 
         identifier: name,
         arguments: args, 
-        expression: parse_expression(expression.to_vec()) 
+        expression: parse_expression(expression.to_vec())
     }
 }
 
@@ -325,7 +375,6 @@ fn parse_declaration(tokens: TokenString) -> Declaration {
             Declaration::ValueDeclaration(ValueDeclaration { identifier, value })
         }
         None => {
-            println!("{tokens:?}");
             // Probably a function 🤷
             let tokens = tokens.into_iter().filter(|token| *token != Token::Space).collect::<Vec<Token>>();
             // Gonna assume everything is correct syntax
@@ -399,6 +448,5 @@ fn into_slices(tokens: TokenString) -> Vec<Vec<Token>> {
 
     slices.push(curr_slice);
 
-    println!("SLICES: {slices:#?}");
     slices
 }

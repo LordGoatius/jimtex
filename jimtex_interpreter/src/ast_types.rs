@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use num::{BigInt, BigRational};
 use crate::lexer::Token;
 use crate::ast::{BinOps, Conditionals, GreekLetters, SetOps, UnOps};
@@ -5,6 +7,24 @@ use crate::ast::{BinOps, Conditionals, GreekLetters, SetOps, UnOps};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub program: Vec<Statement>,
+}
+
+pub struct Iter(VecDeque<Statement>);
+
+impl IntoIterator for Program {
+    type Item = Statement;
+    type IntoIter = Iter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter(VecDeque::from(self.program))
+    }
+}
+
+impl Iterator for Iter {
+    type Item = Statement;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.pop_front()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,14 +68,14 @@ pub struct FunctionCall {
     pub args: Vec<Value>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Identifier {
     GreekLetter(GreekLetters),
     TextIdent(String),
     SubScriptIdent(Box<SubScriptIdent>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SubScriptIdent {
     pub first_ident: Identifier,
     pub secnd_ident: Identifier,

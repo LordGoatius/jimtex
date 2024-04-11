@@ -1,5 +1,5 @@
 use std::{char, fs, path::Path};
-use crate::{ast::{BinOps, Conditionals, GreekLetters, Loops, Statements, UnOps}, parser::{Command, NewCommand}};
+use crate::{ast::{BinOps, Conditionals, GreekLetters, Loops, Statements, UnOps}, ast_types::FunctionCall, parser::{Command, NewCommand}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -59,6 +59,7 @@ pub enum Token {
     Statement(Statements),
     Loop(Loops),
     RightArrow,
+    FunctionCall(FunctionCall),
 
     Real(f64),
 }
