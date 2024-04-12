@@ -9,6 +9,12 @@ pub struct RuntimeError {
 }
 
 impl RuntimeError {
+    pub fn change_line(self, line: usize) -> Self {
+        Self { error: self.error, line }
+    }
+}
+
+impl RuntimeError {
     pub fn new(line: usize, error: RuntimeErrorTypes) -> Self {
         Self { error, line }
     }

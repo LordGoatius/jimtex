@@ -6,6 +6,7 @@ use num::BigInt;
 use crate::ast_types::*;
 use crate::errors::*;
 use crate::ast::{UnOps, BinOps};
+use crate::lexer::Token;
 
 type ExecutionResult           = Result<(), RuntimeError>;
 type ExecutionResultPrint      = Result<String, RuntimeError>;
@@ -49,6 +50,10 @@ impl ProgramInterpreter {
         // NOTE: All identifiers except ones passed as an argument must become values
         // NOTE(args): Domain is only one value, so it will be assumed all inputs are of this one
         // type (We'll say for... uh... type safety)
+        if !self.function_declarations.contains_key(&definition.identifier) {
+            self.function_declarations.insert(definition.identifier.clone(), FunctionDeclaration { identifier: definition.identifier.clone(), domain: Token::Any, codomain: Token::Any });
+        }
+
         let mut ignore = definition.arguments.clone();
         ignore.push(definition.identifier.clone());
         let expression = self.condense_expression(&ignore, definition.expression)?;
@@ -115,11 +120,17 @@ impl ProgramInterpreter {
         let mut function_scope = ProgramInterpreter::default();
         let function_defin = self.function_definitions.get(&function_call.function.clone()).ok_or(RuntimeError::new(self.line, RuntimeErrorTypes::MissingFunction(function_call.function.clone())))?;
         for (ident, value) in function_defin.arguments.clone().into_iter().zip(function_call.args.clone().into_iter()) {
+            // b(n) = \if n \then n * b(n-1) \else 1,
+            // b(7),
+            // x(a, f) = a * f(a),
+            // x(7, b)
+            // When the argument passed (value) matches an identifier, insert it's definition and
+            // declaration with the new ident
             match &value {
-                Value::Identifier(ident) => {
-                    if self.function_declarations.contains_key(&ident) {
-                        function_scope.function_declarations.insert(ident.clone(), self.function_declarations.get(&ident.clone()).unwrap().clone());
-                        function_scope.function_definitions.insert(ident.clone(), self.function_definitions.get(&ident.clone()).unwrap().clone());
+                Value::Identifier(function_ident) => {
+                    if self.function_declarations.contains_key(&function_ident) {
+                        function_scope.function_declarations.insert(ident.clone(), self.function_declarations.get(&function_ident.clone()).unwrap().clone().set_name(ident.clone()));
+                        function_scope.function_definitions.insert(ident.clone(), self.function_definitions.get(&function_ident.clone()).unwrap().clone().set_ident(ident.clone()));
                     } else {
                         function_scope.variables.insert(ident.clone(), self.evaluate_value(value)?);
                     }
@@ -127,13 +138,11 @@ impl ProgramInterpreter {
                 _ => { function_scope.variables.insert(ident, self.evaluate_value(value)?); }
             }
         }
-        println!("{:#?}", self.function_declarations);
-        println!("{:#?}", self.function_definitions);
+        // Insert function into it's own scope
         function_scope.function_declarations.insert(function_call.function.clone(), self.function_declarations.get(&function_call.function.clone()).unwrap().clone());
         function_scope.function_definitions.insert(function_call.function.clone(), self.function_definitions.get(&function_call.function.clone()).unwrap().clone());
-        println!("{function_scope:?}");
 
-        Ok(function_scope.evaluate_expression(function_defin.expression.clone())?)
+        Ok(function_scope.evaluate_expression(function_defin.expression.clone()).map_err(|error| error.change_line(self.line))?)
     }
 
     fn interpret_declaration(&mut self, declaration: Declaration) -> ExecutionResult {
@@ -170,13 +179,7 @@ impl ProgramInterpreter {
 
     fn evaluate_expression(&self, expression: Expression) -> ExecutionResultNumber {
         match expression {
-            Expression::Value(value) => {
-                match *value {
-                    Value::Number(number)    => Ok(number),
-                    Value::Expression(exp)   => Ok(self.evaluate_expression(*exp)?),
-                    Value::Identifier(ident) => self.get_ident_val(ident),       
-                }
-            },
+            Expression::Value(value)                => self.evaluate_value(*value),
             Expression::FunctionCall(function_call) => self.interpret_function_call(function_call),
             Expression::UnaryOperation(unop)        => self.eval_unop(unop),
             Expression::BinaryOperation(binop)      => self.eval_binop(binop),
@@ -188,6 +191,7 @@ impl ProgramInterpreter {
                         Ok(self.evaluate_expression(*conditional.eval_true)?)
                     }
                 } else {
+                    // TODO-NOTE Maybe add support for truthy/fasly non integers
                     Err(RuntimeError::new(self.line, RuntimeErrorTypes::ConditionalsMustEvaluateToNumber))
                 }
             }

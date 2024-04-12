@@ -174,3 +174,15 @@ impl Display for Number {
         }
     }
 }
+
+impl FunctionDeclaration {
+    pub fn set_name(self, identifier: Identifier) -> Self {
+        Self { identifier, domain: self.domain, codomain: self.codomain }
+    }
+}
+
+impl FunctionDefinition {
+    pub fn set_ident(self, identifier: Identifier) -> Self {
+        Self { identifier, arguments: self.arguments, expression: self.expression }
+    }
+}

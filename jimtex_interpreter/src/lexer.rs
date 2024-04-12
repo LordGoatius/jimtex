@@ -46,6 +46,7 @@ pub enum Token {
     ComplexNumbers,
     RationalNumbers,
     Integers,
+    Any,
 
     // PARSER TOKENS ONLY
     CommandStub(String),
