@@ -106,7 +106,17 @@ impl ProgramInterpreter {
         let mut function_scope = ProgramInterpreter::default();
         let function_defin = self.function_definitions.get(&function_call.function.clone()).ok_or(RuntimeError::new(self.line, RuntimeErrorTypes::MissingFunction(function_call.function.clone())))?;
         for (ident, value) in function_defin.arguments.clone().into_iter().zip(function_call.args.clone().into_iter()) {
-            function_scope.variables.insert(ident, self.evaluate_value(value)?);
+            match &value {
+                Value::Identifier(ident) => {
+                    if self.function_declarations.contains_key(&ident) {
+                        function_scope.function_declarations.insert(ident.clone(), self.function_declarations.get(&ident.clone()).unwrap().clone());
+                        function_scope.function_definitions.insert(ident.clone(), self.function_definitions.get(&ident.clone()).unwrap().clone());
+                    } else {
+                        function_scope.variables.insert(ident.clone(), self.evaluate_value(value)?);
+                    }
+                },
+                _ => { function_scope.variables.insert(ident, self.evaluate_value(value)?); }
+            }
         }
         Ok(function_scope.evaluate_expression(function_defin.expression.clone())?)
     }
@@ -126,7 +136,7 @@ impl ProgramInterpreter {
 
     fn interpret_value_declaration(&mut self, value_declaration: ValueDeclaration) -> ExecutionResult {
         // NOTE: Declared values MUST evaluate to a number/specific value at runtime
-        self.variables.insert(value_declaration.identifier.clone(), self.evaluate_expression(Expression::Value(Box::new(value_declaration.value)))?);
+        self.variables.insert(value_declaration.identifier.clone(), self.evaluate_value(value_declaration.value)?);
         Ok(())
     }
 
@@ -161,8 +171,8 @@ impl ProgramInterpreter {
     fn eval_binop(&self, binop: BinaryOperation) -> ExecutionResultNumber {
         match binop.binop {
             BinOps::Multiply => {
-                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
-                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                let num_1 = self.evaluate_value(binop.value_1)?;
+                let num_2 = self.evaluate_value(binop.value_2)?;
                 match num_1 {
                     Number::Integer(num_1) => {
                         match num_2 {
@@ -192,8 +202,8 @@ impl ProgramInterpreter {
                 }
             },
             BinOps::Divide => {
-                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
-                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                let num_1 = self.evaluate_value(binop.value_1)?;
+                let num_2 = self.evaluate_value(binop.value_2)?;
                 match num_1 {
                     Number::Integer(num_1) => {
                         match num_2 {
@@ -223,8 +233,8 @@ impl ProgramInterpreter {
                 }
             },
             BinOps::Addition => {
-                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
-                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                let num_1 = self.evaluate_value(binop.value_1)?;
+                let num_2 = self.evaluate_value(binop.value_2)?;
                 match num_1 {
                     Number::Integer(num_1) => {
                         match num_2 {
@@ -254,8 +264,8 @@ impl ProgramInterpreter {
                 }
             },
             BinOps::Subtraction => {
-                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
-                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                let num_1 = self.evaluate_value(binop.value_1)?;
+                let num_2 = self.evaluate_value(binop.value_2)?;
                 match num_1 {
                     Number::Integer(num_1) => {
                         match num_2 {

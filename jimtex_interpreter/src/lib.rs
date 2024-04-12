@@ -11,6 +11,7 @@ pub mod errors;
 
 #[cfg(test)]
 mod tests {
+    use core::panic;
     use std::collections::HashMap;
     use std::path::Path;
 
@@ -35,10 +36,27 @@ mod tests {
         let mut interpreter = ProgramInterpreter::default();
         match interpreter.interpret_program(program) {
             Ok(_)      => (),
-            Err(error) => println!("{error}")
+            Err(error) => {
+                println!("{error}");
+                panic!()
+            }
         }
     }
 
+    #[test]
+    fn test_error() {
+        let tokens = lex(Path::new("/home/lordgoatius/git/jimtex/jimtex_interpreter/src/error_test.tex"));
+        let tokens = parse(tokens);
+        let program = parse_to_ast(tokens);
+        let mut interpreter = ProgramInterpreter::default();
+        match interpreter.interpret_program(program) {
+            Ok(_)      => (),
+            Err(error) => {
+                println!("{error}");
+            }
+        }
+    }
+    
     #[test]
     fn test_hashing() {
         use crate::lexer::Token;

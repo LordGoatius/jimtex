@@ -448,5 +448,5 @@ fn into_slices(tokens: TokenString) -> Vec<Vec<Token>> {
 
     slices.push(curr_slice);
 
-    slices
+    slices.into_iter().filter(|slice| !slice.is_empty()).collect()
 }
