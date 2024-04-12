@@ -27,6 +27,7 @@ pub enum RuntimeErrorTypes {
     MissingFunction(Identifier),
     UseBeforeDefinition,
     FunctionDefinedWithNoDeclaration,
+    ConditionalsMustEvaluateToNumber,
 }
 
 impl Display for RuntimeErrorTypes {
@@ -37,6 +38,7 @@ impl Display for RuntimeErrorTypes {
             RuntimeErrorTypes::FunctionDefinedWithNoDeclaration => write!(f, "Function Defined with no Declaration"),
             RuntimeErrorTypes::MissingVariable(ident)           => write!(f, "Variable {ident:?} does not exist"),
             RuntimeErrorTypes::MissingFunction(ident)           => write!(f, "Function {ident:?} does not exist"),
+            RuntimeErrorTypes::ConditionalsMustEvaluateToNumber => write!(f, "Conditionals must evaluate to a number"),
         }
     }
 }

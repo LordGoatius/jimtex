@@ -36,7 +36,25 @@ enum SliceType {
 }
 
 fn parse_expression(tokens: TokenString) -> Expression {
-    Expression::Value(Box::new(parse_value(tokens)))
+    parse_conditionals(tokens)
+}
+
+fn parse_conditionals(tokens: TokenString) -> Expression {
+    if let Some(Token::If) = tokens.get(0) {
+        if let [condition, true_exp, false_exp] = tokens
+            .clone()
+            .into_iter()
+            .filter(|token| *token != Token::If)
+            .collect::<Vec<Token>>()
+            .split(|token| *token == Token::Then || *token == Token::Else)
+            .collect::<Vec<_>>()[..] {
+            Expression::Conditional(Conditional { condition: parse_value(condition.to_vec()), eval_true: Box::new(parse_expression(true_exp.to_vec())), eval_false: Box::new(parse_expression(false_exp.to_vec())) })
+        } else {
+            panic!("should split into three")
+        }
+    } else {
+        Expression::Value(Box::new(parse_value(tokens)))
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -127,126 +145,139 @@ fn make_function_calls(tokens: TokenString) -> TokenString {
 }
 
 fn parse_value(tokens: TokenString) -> Value {
-    let mut res: TokenString = vec![];
-    let tokens = make_real_numbers(tokens);
-    let tokens = make_function_calls(tokens);
-    // Base cases of number and identifier
-    let mut stack: TokenString = vec![];
+    if let Some(Token::If) = tokens.get(0) {
+        if let [condition, true_exp, false_exp] = tokens
+            .clone()
+            .into_iter()
+            .filter(|token| *token != Token::If)
+            .collect::<Vec<Token>>()
+            .split(|token| *token == Token::Then || *token == Token::Else)
+            .collect::<Vec<_>>()[..] {
+            Value::Expression(Box::new(Expression::Conditional(Conditional { condition: parse_value(condition.to_vec()), eval_true: Box::new(parse_expression(true_exp.to_vec())), eval_false: Box::new(parse_expression(false_exp.to_vec())) })))
+        } else {
+            panic!("should split into three")
+        }
+    } else {
+        let mut res: TokenString = vec![];
+        let tokens = make_real_numbers(tokens);
+        let tokens = make_function_calls(tokens);
+        // Base cases of number and identifier
+        let mut stack: TokenString = vec![];
 
-    for token in tokens {
-        match token {
-            Token::Real(number) => {
-                res.push(Token::Real(number));
-            },
-            Token::Number(number) => {
-                res.push(Token::Number(number.parse().unwrap()));
-            },
-            Token::Text(text) => {
-                res.push(Token::Text(text));
-            },
-            Token::GreekLetter(letter) => {
-                res.push(Token::GreekLetter(letter));
-            },
-            Token::FunctionCall(call) => {
-                res.push(Token::FunctionCall(call));
-            },
-            //assume identifier
-            Token::Operator(_) => {
-                while !stack.is_empty() && precedence(Some(&token)) <  precedence(stack.last())
-                                        || precedence(Some(&token)) == precedence(stack.last()) 
-                                        && associativity(&token) == Associativity::Left {
-                    res.push(stack.pop().unwrap())
+        for token in tokens {
+            match token {
+                Token::Real(number) => {
+                    res.push(Token::Real(number));
+                },
+                Token::Number(number) => {
+                    res.push(Token::Number(number.parse().unwrap()));
+                },
+                Token::Text(text) => {
+                    res.push(Token::Text(text));
+                },
+                Token::GreekLetter(letter) => {
+                    res.push(Token::GreekLetter(letter));
+                },
+                Token::FunctionCall(call) => {
+                    res.push(Token::FunctionCall(call));
+                },
+                //assume identifier
+                Token::Operator(_) => {
+                    while !stack.is_empty() && precedence(Some(&token)) <  precedence(stack.last())
+                                            || precedence(Some(&token)) == precedence(stack.last()) 
+                                            && associativity(&token) == Associativity::Left {
+                        res.push(stack.pop().unwrap())
+                    }
+                    stack.push(token);
+                },
+                Token::BinOp(_) => {
+                    while !stack.is_empty() && precedence(Some(&token)) <  precedence(stack.last())
+                                            || precedence(Some(&token)) == precedence(stack.last()) 
+                                            && associativity(&token) == Associativity::Left {
+                        res.push(stack.pop().unwrap())
+                    }
+                    stack.push(token);
+                },
+                Token::UnOps(_) => {
+                    while !stack.is_empty() && precedence(Some(&token)) <  precedence(stack.last())
+                                            || precedence(Some(&token)) == precedence(stack.last()) 
+                                            && associativity(&token) == Associativity::Left {
+                        res.push(stack.pop().unwrap())
+                    }
+                    stack.push(token);
+                },
+                Token::LeftParen => {
+                    stack.push(Token::LeftParen);
+                },
+                Token::RightParen => {
+                    while !stack.is_empty() && stack.last() != Some(&Token::LeftParen) {
+                        res.push(stack.pop().unwrap());
+                    }
                 }
-                stack.push(token);
-            },
-            Token::BinOp(_) => {
-                while !stack.is_empty() && precedence(Some(&token)) <  precedence(stack.last())
-                                        || precedence(Some(&token)) == precedence(stack.last()) 
-                                        && associativity(&token) == Associativity::Left {
-                    res.push(stack.pop().unwrap())
-                }
-                stack.push(token);
-            },
-            Token::UnOps(_) => {
-                while !stack.is_empty() && precedence(Some(&token)) <  precedence(stack.last())
-                                        || precedence(Some(&token)) == precedence(stack.last()) 
-                                        && associativity(&token) == Associativity::Left {
-                    res.push(stack.pop().unwrap())
-                }
-                stack.push(token);
-            },
-            Token::LeftParen => {
-                stack.push(Token::LeftParen);
-            },
-            Token::RightParen => {
-                while !stack.is_empty() && stack.last() != Some(&Token::LeftParen) {
-                    res.push(stack.pop().unwrap());
-                }
+                _ => panic!(),
+                // assume no Subscript identifiers, I just want a working parser for some things
             }
-            _ => panic!(),
-            // assume no Subscript identifiers, I just want a working parser for some things
         }
-    }
 
 
-    while !stack.is_empty() {
-        res.push(stack.pop().unwrap());
-    }
-
-    // Now in reverse polish notation
-    
-    let res = res.into_iter().filter(|token| *token != Token::LeftParen).collect::<TokenString>();
-
-    let mut res_2: Vec<Value> = vec![];
-
-    for token in res {
-        match token {
-            Token::Real(number) => {
-                res_2.push(Value::Number(Number::Real(number)));
-            },
-            Token::Number(number) => {
-                res_2.push(Value::Number(Number::Integer(number.parse().unwrap())));
-            },
-            Token::Text(text) => {
-                res_2.push(Value::Identifier(Identifier::TextIdent(text)));
-            },
-            Token::GreekLetter(letter) => {
-                res_2.push(Value::Identifier(Identifier::GreekLetter(letter)));
-            },
-            Token::FunctionCall(call) => {
-                res_2.push(Value::Expression(Box::new(Expression::FunctionCall(call))));
-            },
-            //assume identifier
-            Token::Operator(operator) => {
-                let value_2 = res_2.pop().unwrap();
-                let value_1 = res_2.pop().unwrap();
-                res_2.push(Value::Expression(Box::new(Expression::BinaryOperation(BinaryOperation { 
-                    value_1,
-                    binop: token_op_to_binop(operator), 
-                    value_2,
-                }))))
-            },
-            Token::BinOp(binop) => {
-                let value_2 = res_2.pop().unwrap();
-                let value_1 = res_2.pop().unwrap();
-                res_2.push(Value::Expression(Box::new(Expression::BinaryOperation(BinaryOperation { 
-                    value_1,
-                    binop, 
-                    value_2
-                }))))
-            },
-            Token::UnOps(unop) => {
-                res_2.push(Value::Expression(Box::new(Expression::UnaryOperation(UnaryOperation { 
-                    value: real_num_text_greek_to_val(stack.pop().unwrap()),
-                    unop,
-                }))))
-            },
-            _ => (),
-            // assume no Subscript identifiers, I just want a working parser for some things
+        while !stack.is_empty() {
+            res.push(stack.pop().unwrap());
         }
-    }
 
-    res_2.last().unwrap().clone()
+        // Now in reverse polish notation
+        
+        let res = res.into_iter().filter(|token| *token != Token::LeftParen).collect::<TokenString>();
+
+        let mut res_2: Vec<Value> = vec![];
+
+        for token in res {
+            match token {
+                Token::Real(number) => {
+                    res_2.push(Value::Number(Number::Real(number)));
+                },
+                Token::Number(number) => {
+                    res_2.push(Value::Number(Number::Integer(number.parse().unwrap())));
+                },
+                Token::Text(text) => {
+                    res_2.push(Value::Identifier(Identifier::TextIdent(text)));
+                },
+                Token::GreekLetter(letter) => {
+                    res_2.push(Value::Identifier(Identifier::GreekLetter(letter)));
+                },
+                Token::FunctionCall(call) => {
+                    res_2.push(Value::Expression(Box::new(Expression::FunctionCall(call))));
+                },
+                //assume identifier
+                Token::Operator(operator) => {
+                    let value_2 = res_2.pop().unwrap();
+                    let value_1 = res_2.pop().unwrap();
+                    res_2.push(Value::Expression(Box::new(Expression::BinaryOperation(BinaryOperation { 
+                        value_1,
+                        binop: token_op_to_binop(operator), 
+                        value_2,
+                    }))))
+                },
+                Token::BinOp(binop) => {
+                    let value_2 = res_2.pop().unwrap();
+                    let value_1 = res_2.pop().unwrap();
+                    res_2.push(Value::Expression(Box::new(Expression::BinaryOperation(BinaryOperation { 
+                        value_1,
+                        binop, 
+                        value_2
+                    }))))
+                },
+                Token::UnOps(unop) => {
+                    res_2.push(Value::Expression(Box::new(Expression::UnaryOperation(UnaryOperation { 
+                        value: real_num_text_greek_to_val(stack.pop().unwrap()),
+                        unop,
+                    }))))
+                },
+                _ => (),
+                // assume no Subscript identifiers, I just want a working parser for some things
+            }
+        }
+        res_2.last().unwrap().clone()
+    }
 }
 
 fn real_num_text_greek_to_val(token: Token) -> Value {

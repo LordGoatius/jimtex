@@ -62,6 +62,10 @@ pub enum Token {
     FunctionCall(FunctionCall),
 
     Real(f64),
+
+    If,
+    Then,
+    Else
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]

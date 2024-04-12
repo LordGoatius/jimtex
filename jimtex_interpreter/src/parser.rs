@@ -253,6 +253,12 @@ fn parse_cmd_stub(token: Token) -> Token {
                 
                 "rightarrow" => Token::RightArrow,
 
+                // Conditional
+                
+                "if"         => Token::If,
+                "then"       => Token::Then,
+                "else"       => Token::Else,
+
                 default      => Token::CommandStub(default.to_owned()),
             }
         }

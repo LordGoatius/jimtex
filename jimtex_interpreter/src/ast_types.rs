@@ -45,9 +45,17 @@ pub enum Value {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Value(Box<Value>),
+    Conditional(Conditional),
     FunctionCall(FunctionCall),
     UnaryOperation(UnaryOperation),
     BinaryOperation(BinaryOperation),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Conditional {
+    pub condition:  Value,
+    pub eval_true:  Box<Expression>,
+    pub eval_false: Box<Expression> 
 }
 
 #[derive(Debug, Clone, PartialEq)]

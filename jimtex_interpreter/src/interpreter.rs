@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
+use num::BigInt;
+
 use crate::ast_types::*;
 use crate::errors::*;
 use crate::ast::{UnOps, BinOps};
@@ -99,6 +101,13 @@ impl ProgramInterpreter {
                     }
                 }
             },
+            Expression::Conditional(conditional) => {
+                Ok(Expression::Conditional(Conditional { 
+                    condition:  conditional.condition, 
+                    eval_true:  Box::new(self.condense_expression(ignore, *conditional.eval_true)?),
+                    eval_false: Box::new(self.condense_expression(ignore, *conditional.eval_false)?),
+                }))
+            }
         }
     }
 
@@ -118,6 +127,12 @@ impl ProgramInterpreter {
                 _ => { function_scope.variables.insert(ident, self.evaluate_value(value)?); }
             }
         }
+        println!("{:#?}", self.function_declarations);
+        println!("{:#?}", self.function_definitions);
+        function_scope.function_declarations.insert(function_call.function.clone(), self.function_declarations.get(&function_call.function.clone()).unwrap().clone());
+        function_scope.function_definitions.insert(function_call.function.clone(), self.function_definitions.get(&function_call.function.clone()).unwrap().clone());
+        println!("{function_scope:?}");
+
         Ok(function_scope.evaluate_expression(function_defin.expression.clone())?)
     }
 
@@ -165,6 +180,17 @@ impl ProgramInterpreter {
             Expression::FunctionCall(function_call) => self.interpret_function_call(function_call),
             Expression::UnaryOperation(unop)        => self.eval_unop(unop),
             Expression::BinaryOperation(binop)      => self.eval_binop(binop),
+            Expression::Conditional(conditional)    => {
+                if let Number::Integer(num) = self.evaluate_value(conditional.condition)? {
+                    if num == BigInt::from(0u8) {
+                        Ok(self.evaluate_expression(*conditional.eval_false)?)
+                    } else {
+                        Ok(self.evaluate_expression(*conditional.eval_true)?)
+                    }
+                } else {
+                    Err(RuntimeError::new(self.line, RuntimeErrorTypes::ConditionalsMustEvaluateToNumber))
+                }
+            }
         }
     }
 
