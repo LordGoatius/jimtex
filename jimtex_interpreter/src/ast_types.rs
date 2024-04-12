@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::fmt::Display;
 
 use num::{BigInt, BigRational};
 use crate::lexer::Token;
@@ -153,4 +154,15 @@ pub struct FunctionDefinition {
     pub identifier: Identifier,
     pub arguments:  Vec<Identifier>,
     pub expression: Expression
+}
+
+impl Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Number::Real(real)    => write!(f, "{real:?}"),
+            Number::Integer(int)  => write!(f, "{int:?}"),
+            Number::Rational(rat) => write!(f, "{rat:?}"),
+            Number::Complex(cplx) => write!(f, "{cplx:?}"),
+        }
+    }
 }

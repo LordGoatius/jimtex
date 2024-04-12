@@ -3,14 +3,20 @@ use std::fmt::Display;
 
 use crate::ast_types::*;
 use crate::errors::*;
+use crate::ast::{UnOps, BinOps};
 
-type ExecutionResult = Result<(), RuntimeError>;
+type ExecutionResult           = Result<(), RuntimeError>;
+type ExecutionResultPrint      = Result<String, RuntimeError>;
+type ExecutionResultValue      = Result<Value, RuntimeError>;
+type ExecutionResultNumber     = Result<Number, RuntimeError>;
+type ExecutionResultExpression = Result<Expression, RuntimeError>;
 
-#[derive(Debug)]
-struct ProgramInterpreter {
+#[derive(Debug, Default)]
+pub struct ProgramInterpreter {
     function_definitions:  HashMap<Identifier, FunctionDefinition>,
     function_declarations: HashMap<Identifier, FunctionDeclaration>,
-    variables: HashMap<Identifier, Value>
+    variables: HashMap<Identifier, Number>,
+    line: usize,
 }
 
 impl ProgramInterpreter {
@@ -18,19 +24,91 @@ impl ProgramInterpreter {
         match statement {
             Statement::FunctionDefinition(function_definition) => self.interpret_function_definition(function_definition),
             Statement::Declaration(declaration)                => self.interpret_declaration(declaration),
-            Statement::Expression(expression)                  => self.iterpret_expression(expression),
+            Statement::Expression(expression)                  => {
+                match self.interpret_expression(expression) {
+                    Ok(string) => { println!("{string}"); Ok(()) },
+                    Err(error) => Err(error),
+                }
+            }
         }
     }
 
+    // Runtime determines how to handle errors
+
     pub fn interpret_program(&mut self, program: Program) -> ExecutionResult {
         for statement in program {
+            self.line += 1;
             self.interpret_statement(statement)?;
         }
         Ok(())
     }
 
     fn interpret_function_definition(&mut self, definition: FunctionDefinition) -> ExecutionResult {
-        todo!()
+        // NOTE: All identifiers except ones passed as an argument must become values
+        // NOTE(args): Domain is only one value, so it will be assumed all inputs are of this one
+        // type (We'll say for... uh... type safety)
+        let mut ignore = definition.arguments.clone();
+        ignore.push(definition.identifier.clone());
+        let expression = self.condense_expression(&ignore, definition.expression)?;
+        self.function_definitions.insert(definition.identifier.clone(), FunctionDefinition { identifier: definition.identifier, arguments: definition.arguments, expression });
+        Ok(())
+    }
+
+    fn condense_value(&self, ignore: &Vec<Identifier>, value: Value) -> ExecutionResultValue {
+        match value {
+            Value::Number(num)       => Ok(Value::Number(num)),
+            Value::Expression(exp)   => Ok(Value::Expression(Box::new(self.condense_expression(ignore, *exp)?))),
+            Value::Identifier(ident) => {
+                if ignore.contains(&ident.clone()) {
+                    Ok(Value::Identifier(ident))
+                } else {
+                    Ok(Value::Number(self.get_ident_val(ident)?))
+                }
+            }
+        }
+    }
+
+    fn condense_expression(&self, ignore: &Vec<Identifier>, expression: Expression) -> ExecutionResultExpression {
+        match expression {
+            Expression::BinaryOperation(binop) => {
+                let value_1 = self.condense_value(ignore, binop.value_1)?;
+                let value_2 = self.condense_value(ignore, binop.value_2)?;
+                Ok(Expression::BinaryOperation(BinaryOperation { value_1, binop: binop.binop, value_2 }))
+            },
+            Expression::UnaryOperation(unop) => {
+                let value = self.condense_value(ignore, unop.value)?;
+                Ok(Expression::UnaryOperation(UnaryOperation { unop: unop.unop, value }))
+            },
+            Expression::FunctionCall(fn_call) => {
+                if ignore.contains(&fn_call.function.clone()) {
+                    Ok(Expression::FunctionCall(fn_call))
+                } else {
+                    Ok(Expression::Value(Box::new(Value::Number(self.interpret_function_call(fn_call)?))))
+                }
+            },
+            Expression::Value(value) => {
+                match *value {
+                    Value::Number(num) => Ok(Expression::Value(Box::new(Value::Number(num)))),
+                    Value::Expression(exp) => Ok(self.condense_expression(ignore, *exp)?),
+                    Value::Identifier(ident) => {
+                        if ignore.contains(&ident.clone()) {
+                            Ok(Expression::Value(Box::new(Value::Identifier(ident))))
+                        } else {
+                            Ok(Expression::Value(Box::new(Value::Number(self.get_ident_val(ident)?))))
+                        }
+                    }
+                }
+            },
+        }
+    }
+
+    fn interpret_function_call(&self, function_call: FunctionCall) -> ExecutionResultNumber {
+        let mut function_scope = ProgramInterpreter::default();
+        let function_defin = self.function_definitions.get(&function_call.function.clone()).ok_or(RuntimeError::new(self.line, RuntimeErrorTypes::MissingFunction(function_call.function.clone())))?;
+        for (ident, value) in function_defin.arguments.clone().into_iter().zip(function_call.args.clone().into_iter()) {
+            function_scope.variables.insert(ident, self.evaluate_value(value)?);
+        }
+        Ok(function_scope.evaluate_expression(function_defin.expression.clone())?)
     }
 
     fn interpret_declaration(&mut self, declaration: Declaration) -> ExecutionResult {
@@ -48,15 +126,191 @@ impl ProgramInterpreter {
 
     fn interpret_value_declaration(&mut self, value_declaration: ValueDeclaration) -> ExecutionResult {
         // NOTE: Declared values MUST evaluate to a number/specific value at runtime
-        todo!()
+        self.variables.insert(value_declaration.identifier.clone(), self.evaluate_expression(Expression::Value(Box::new(value_declaration.value)))?);
+        Ok(())
     }
 
-    fn iterpret_expression(&self, expression: Expression) -> ExecutionResult {
-        todo!()
+    fn interpret_expression(&self, expression: Expression) -> ExecutionResultPrint {
+        let num = self.evaluate_expression(expression)?;
+        Ok(format!("{num}"))
     }
 
-    fn interpret_function_call(&self, function_call: FunctionCall) -> ExecutionResult {
-        todo!()
+    fn evaluate_value(&self, value: Value) -> ExecutionResultNumber {
+        match value {
+            Value::Number(num)       => Ok(num),
+            Value::Identifier(ident) => Ok(self.get_ident_val(ident)?),
+            Value::Expression(exprs) => Ok(self.evaluate_expression(*exprs)?),
+        }
+    }
+
+    fn evaluate_expression(&self, expression: Expression) -> ExecutionResultNumber {
+        match expression {
+            Expression::Value(value) => {
+                match *value {
+                    Value::Number(number)    => Ok(number),
+                    Value::Expression(exp)   => Ok(self.evaluate_expression(*exp)?),
+                    Value::Identifier(ident) => self.get_ident_val(ident),       
+                }
+            },
+            Expression::FunctionCall(function_call) => self.interpret_function_call(function_call),
+            Expression::UnaryOperation(unop)        => self.eval_unop(unop),
+            Expression::BinaryOperation(binop)      => self.eval_binop(binop),
+        }
+    }
+
+    fn eval_binop(&self, binop: BinaryOperation) -> ExecutionResultNumber {
+        match binop.binop {
+            BinOps::Multiply => {
+                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
+                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                match num_1 {
+                    Number::Integer(num_1) => {
+                        match num_2 {
+                            Number::Integer(num_2) => {
+                                Ok(Number::Integer(num_1 * num_2))
+                            },
+                            Number::Real(num_2) => {
+                                let num_1 = num_1.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 * num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    Number::Real(num_1) => {
+                        match num_2 {
+                            Number::Real(num_2) => {
+                                Ok(Number::Real(num_1 * num_2))
+                            },
+                            Number::Integer(num_2) => {
+                                let num_2 = num_2.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 * num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    _ => todo!(),
+                }
+            },
+            BinOps::Divide => {
+                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
+                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                match num_1 {
+                    Number::Integer(num_1) => {
+                        match num_2 {
+                            Number::Integer(num_2) => {
+                                Ok(Number::Integer(num_1 / num_2))
+                            },
+                            Number::Real(num_2) => {
+                                let num_1 = num_1.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 / num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    Number::Real(num_1) => {
+                        match num_2 {
+                            Number::Real(num_2) => {
+                                Ok(Number::Real(num_1 / num_2))
+                            },
+                            Number::Integer(num_2) => {
+                                let num_2 = num_2.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 / num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    _ => todo!(),
+                }
+            },
+            BinOps::Addition => {
+                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
+                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                match num_1 {
+                    Number::Integer(num_1) => {
+                        match num_2 {
+                            Number::Integer(num_2) => {
+                                Ok(Number::Integer(num_1 + num_2))
+                            },
+                            Number::Real(num_2) => {
+                                let num_1 = num_1.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 + num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    Number::Real(num_1) => {
+                        match num_2 {
+                            Number::Real(num_2) => {
+                                Ok(Number::Real(num_1 + num_2))
+                            },
+                            Number::Integer(num_2) => {
+                                let num_2 = num_2.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 + num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    _ => todo!(),
+                }
+            },
+            BinOps::Subtraction => {
+                let num_1 = self.evaluate_expression(Expression::Value(Box::new(binop.value_1)))?;
+                let num_2 = self.evaluate_expression(Expression::Value(Box::new(binop.value_2)))?;
+                match num_1 {
+                    Number::Integer(num_1) => {
+                        match num_2 {
+                            Number::Integer(num_2) => {
+                                Ok(Number::Integer(num_1 - num_2))
+                            },
+                            Number::Real(num_2) => {
+                                let num_1 = num_1.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 - num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    Number::Real(num_1) => {
+                        match num_2 {
+                            Number::Real(num_2) => {
+                                Ok(Number::Real(num_1 - num_2))
+                            },
+                            Number::Integer(num_2) => {
+                                let num_2 = num_2.to_string().parse::<f64>().map_err(|_| RuntimeError::new(self.line, RuntimeErrorTypes::TypeError))?; 
+                                Ok(Number::Real(num_1 - num_2))
+                            },
+                            _ => todo!()
+                        }
+                    },
+                    _ => todo!(),
+                }
+            },
+            _ => todo!(),
+        }
+    }
+
+    fn eval_unop(&self, unop: UnaryOperation) -> ExecutionResultNumber {
+        match unop.unop {
+            UnOps::Negation => {
+                match unop.value {
+                    Value::Number(num) => {
+                        match num {
+                            Number::Real(real)   => Ok(Number::Real(-real)),
+                            Number::Integer(int) => Ok(Number::Integer(-int)),
+                            Number::Complex(_)   => todo!(),
+                            Number::Rational(_)  => todo!(),
+                        }
+                    },
+                    Value::Identifier(ident) => self.get_ident_val(ident),
+                    Value::Expression(expr)  => self.evaluate_expression(*expr),
+                }
+            },
+            UnOps::BoolNot => todo!(),
+        }
+    }
+
+    fn get_ident_val(&self, ident: Identifier) -> ExecutionResultNumber {
+        if self.variables.contains_key(&ident.clone()) { Ok(self.variables[&ident.clone()].clone()) }
+        else { Err(RuntimeError::new(self.line, RuntimeErrorTypes::MissingVariable(ident))) }
     }
 }
 

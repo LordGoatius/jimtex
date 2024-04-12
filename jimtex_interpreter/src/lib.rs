@@ -15,6 +15,7 @@ mod tests {
     use std::path::Path;
 
     use crate::ast_types::{FunctionDeclaration, FunctionDefinition, Identifier, Value};
+    use crate::interpreter::ProgramInterpreter;
     use crate::lexer::lex;
     use crate::parser::parse;
     use crate::parser_ast::parse_to_ast;
@@ -30,8 +31,12 @@ mod tests {
     fn test_small() {
         let tokens = lex(Path::new("/home/lordgoatius/git/jimtex/jimtex_interpreter/src/small_test.tex"));
         let tokens = parse(tokens);
-        let tokens = parse_to_ast(tokens);
-        println!("{tokens:#?}");
+        let program = parse_to_ast(tokens);
+        let mut interpreter = ProgramInterpreter::default();
+        match interpreter.interpret_program(program) {
+            Ok(_)      => (),
+            Err(error) => println!("{error}")
+        }
     }
 
     #[test]
