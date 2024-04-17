@@ -5,7 +5,7 @@
 A short summary of what JimTeX currently is: \
     - A turing-complete programming language with syntax inspired by LaTeX. \
     - A kind of sequel to my compiler, this is a fully interpreted language, intended to be embedded into the JimTeX IDE. \
-    - *Nearly* fully functional (functions can be passed as functions to functions, but not returned, mutability is handled with reassignment) \
+    - Partially functional (functions can be passed as functions to functions, but not returned, mutability is handled with reassignment) \
     - Examples are in the jimtex_interpreter library as tests, run with `$ cargo test -- --nocapture` to view console output. 
 
 ## Goals
