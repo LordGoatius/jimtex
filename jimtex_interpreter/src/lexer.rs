@@ -156,7 +156,7 @@ pub fn lex(input: &Path) -> TokenString {
             char => {
                 if char.is_ascii_digit() {
                     num_vec.push(char);
-                    if text_vec.len() > 0 {
+                    if !text_vec.is_empty() {
                         let prev: Token = token_string.pop().expect("Should be impossible");
                         token_string.push(Token::Text(text_vec.iter().collect::<String>()));
                         token_string.push(prev);
@@ -164,7 +164,7 @@ pub fn lex(input: &Path) -> TokenString {
                     }
                 } else {
                     text_vec.push(char);
-                    if num_vec.len() > 0 {
+                    if !num_vec.is_empty() {
                         let prev: Token = token_string.pop().expect("Should be impossible");
                         token_string.push(Token::Number(num_vec.iter().collect::<String>()));
                         token_string.push(prev);
@@ -174,13 +174,13 @@ pub fn lex(input: &Path) -> TokenString {
                 continue;
             }
         }
-        if text_vec.len() > 0 {
+        if !text_vec.is_empty() {
             let prev: Token = token_string.pop().expect("Should be impossible");
             token_string.push(Token::Text(text_vec.iter().collect::<String>()));
             token_string.push(prev);
             text_vec = vec![];
         }
-        if num_vec.len() > 0 {
+        if !num_vec.is_empty() {
             let prev: Token = token_string.pop().expect("Should be impossible");
             token_string.push(Token::Number(num_vec.iter().collect::<String>()));
             token_string.push(prev);

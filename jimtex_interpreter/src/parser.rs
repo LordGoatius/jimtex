@@ -125,8 +125,8 @@ fn command_option_parser(tokens: TokenString) -> TokenString {
 
             ret_vec.push(Token::Command(Command { 
                 name, 
-                req: req.into_iter().map(|tk_str| command_option_parser(tk_str)).collect(), 
-                opt: opt.into_iter().map(|tk_str| command_option_parser(tk_str)).collect()
+                req: req.into_iter().map(command_option_parser).collect(), 
+                opt: opt.into_iter().map(command_option_parser).collect()
             }));
 
         } else {

@@ -40,7 +40,7 @@ fn parse_expression(tokens: TokenString) -> Expression {
 }
 
 fn parse_conditionals(tokens: TokenString) -> Expression {
-    if let Some(Token::If) = tokens.get(0) {
+    if let Some(Token::If) = tokens.first() {
         if let [condition, true_exp, false_exp] = tokens
             .clone()
             .into_iter()
@@ -66,7 +66,7 @@ enum Precedence {
 }
 
 fn precedence(token: Option<&Token>) -> Precedence {
-    if let None = token {
+    if token.is_none() {
         return Precedence::None;
     }
     match token.unwrap() {
@@ -145,7 +145,7 @@ fn make_function_calls(tokens: TokenString) -> TokenString {
 }
 
 fn parse_value(tokens: TokenString) -> Value {
-    if let Some(Token::If) = tokens.get(0) {
+    if let Some(Token::If) = tokens.first() {
         if let [condition, true_exp, false_exp] = tokens
             .clone()
             .into_iter()
@@ -219,10 +219,13 @@ fn parse_value(tokens: TokenString) -> Value {
             }
         }
 
-
-        while !stack.is_empty() {
-            res.push(stack.pop().unwrap());
+        while let Some(element) = stack.pop() {
+            res.push(element);
         }
+
+        // while !stack.is_empty() {
+        //     res.push(stack.pop().unwrap());
+        // }
 
         // Now in reverse polish notation
         
@@ -356,22 +359,22 @@ fn parse_function_def(tokens: TokenString) -> FunctionDefinition {
     let (name, values) = signature.split_once(|token| *token == Token::LeftParen).unwrap();
 
     let name = text_or_greek_to_ident(name
-        .into_iter()
-        .filter_map(|token| {
+        .iter()
+        .filter(|token| {
             if let Token::GreekLetter(_) = token {
-                return Some(token);
+                return true;
             }
             if let Token::Text(_) = token {
-                return Some(token);
+                return true;
             }
-            None
+            false
         })
-        .map(|token| token.clone())
+        .cloned()
         .collect::<Vec<Token>>()
         .first()
         .unwrap().clone());
 
-    let args = values.into_iter()
+    let args = values.iter()
         .filter(|token| {
             if let Token::GreekLetter(_) = token {
                 return true;
@@ -435,7 +438,7 @@ fn parse_identifier(tokens: TokenString) -> Identifier {
         ));
     }
 
-    match tokens.get(0) {
+    match tokens.first() {
         Some(Token::Text(text)) => {
             Identifier::TextIdent(text.to_owned())
         },

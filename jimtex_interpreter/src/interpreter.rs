@@ -128,7 +128,7 @@ impl ProgramInterpreter {
             // declaration with the new ident
             match &value {
                 Value::Identifier(function_ident) => {
-                    if self.function_declarations.contains_key(&function_ident) {
+                    if self.function_declarations.contains_key(function_ident) {
                         function_scope.function_declarations.insert(ident.clone(), self.function_declarations.get(&function_ident.clone()).unwrap().clone().set_name(ident.clone()));
                         function_scope.function_definitions.insert(ident.clone(), self.function_definitions.get(&function_ident.clone()).unwrap().clone().set_ident(ident.clone()));
                     } else {
@@ -142,7 +142,7 @@ impl ProgramInterpreter {
         function_scope.function_declarations.insert(function_call.function.clone(), self.function_declarations.get(&function_call.function.clone()).unwrap().clone());
         function_scope.function_definitions.insert(function_call.function.clone(), self.function_definitions.get(&function_call.function.clone()).unwrap().clone());
 
-        Ok(function_scope.evaluate_expression(function_defin.expression.clone()).map_err(|error| error.change_line(self.line))?)
+        function_scope.evaluate_expression(function_defin.expression.clone()).map_err(|error| error.change_line(self.line))
     }
 
     fn interpret_declaration(&mut self, declaration: Declaration) -> ExecutionResult {
