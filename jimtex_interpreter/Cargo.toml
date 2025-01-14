@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 num = "0.4.1"
+
+[dependencies.inkwell]
+version = " 0.5.0"
+features = ["llvm18-0", "llvm18-0-prefer-static"]
