@@ -8,6 +8,7 @@ pub mod parser_ast;
 pub mod ast_types;
 pub mod interpreter;
 pub mod errors;
+pub mod compiler;
 
 #[cfg(test)]
 mod tests {
@@ -35,7 +36,7 @@ mod tests {
         match interpreter.interpret_program(program) {
             Ok(_)      => (),
             Err(error) => {
-                println!("{error}");
+                eprintln!("{error}");
                 panic!()
             }
         }
@@ -50,7 +51,7 @@ mod tests {
         match interpreter.interpret_program(program) {
             Ok(_)      => (),
             Err(error) => {
-                println!("{error}");
+                eprintln!("{error}");
                 panic!()
             }
         }
@@ -65,7 +66,7 @@ mod tests {
         match interpreter.interpret_program(program) {
             Ok(_)      => (),
             Err(error) => {
-                println!("{error}");
+                eprintln!("{error}");
             }
         }
     }

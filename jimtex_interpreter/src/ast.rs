@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GreekLetters {
     Alpha,
@@ -42,6 +44,52 @@ pub enum GreekLetters {
     UpperPsi,
     UpperOmega
     // TODO Add more
+}
+
+impl Display for GreekLetters {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GreekLetters::Alpha => write!(f, "\\alpha"),
+            GreekLetters::Beta => write!(f, "\\beta"),
+            GreekLetters::Gamma => write!(f, "\\gamma"),
+            GreekLetters::Delta => write!(f, "\\delta"),
+            GreekLetters::Epsilon => write!(f, "\\epsilon"),
+            GreekLetters::Zeta => write!(f, "\\zeta"),
+            GreekLetters::Eta => write!(f, "\\eta"),
+            GreekLetters::Theta => write!(f, "\\theta"),
+            GreekLetters::Iota => write!(f, "\\iota"),
+            GreekLetters::Kappa => write!(f, "\\kappa"),
+            GreekLetters::Lambda => write!(f, "\\lambda"),
+            GreekLetters::Mu => write!(f, "\\mu"),
+            GreekLetters::Nu => write!(f, "\\nu"),
+            GreekLetters::Xi => write!(f, "\\xi"),
+            GreekLetters::Pi => write!(f, "\\pi"),
+            GreekLetters::Rho => write!(f, "\\rho"),
+            GreekLetters::Sigma => write!(f, "\\sigma"),
+            GreekLetters::Tau => write!(f, "\\tau"),
+            GreekLetters::Upsilon => write!(f, "\\upsilon"),
+            GreekLetters::Phi => write!(f, "\\phi"),
+            GreekLetters::Chi => write!(f, "\\chi"),
+            GreekLetters::Psi => write!(f, "\\psi"),
+            GreekLetters::Omega => write!(f, "\\omega"),
+            GreekLetters::VarEpsilon => write!(f, "\\varEpsilon"),
+            GreekLetters::VarTheta => write!(f, "\\varTheta"),
+            GreekLetters::VarRho => write!(f, "\\varRho"),
+            GreekLetters::VarSigma => write!(f, "\\varSigma"),
+            GreekLetters::VarPhi => write!(f, "\\varPhi"),
+            GreekLetters::UpperGamma => write!(f, "\\upperGamma"),
+            GreekLetters::UpperDelta => write!(f, "\\upperDelta"),
+            GreekLetters::UpperTheta => write!(f, "\\upperTheta"),
+            GreekLetters::UpperLambda => write!(f, "\\upperLambda"),
+            GreekLetters::UpperXi => write!(f, "\\upperXi"),
+            GreekLetters::UpperPi => write!(f, "\\upperPi"),
+            GreekLetters::UpperSigma => write!(f, "\\upperSigma"),
+            GreekLetters::UpperUpsilon => write!(f, "\\upperUpsilon"),
+            GreekLetters::UpperPhi => write!(f, "\\upperPhi"),
+            GreekLetters::UpperPsi => write!(f, "\\upperPsi"),
+            GreekLetters::UpperOmega => write!(f, "\\upperOmeg"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

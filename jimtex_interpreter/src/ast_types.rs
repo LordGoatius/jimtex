@@ -175,6 +175,24 @@ impl Display for Number {
     }
 }
 
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Identifier::TextIdent(tident) => write!(f, "{tident}"),
+            Identifier::GreekLetter(lett) => write!(f, "{lett}"),
+            Identifier::SubScriptIdent(s) => write!(f, "{s}")
+
+        }
+    }
+}
+
+impl Display for SubScriptIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let SubScriptIdent { first_ident, secnd_ident } = self;
+        write!(f, "{first_ident}_{secnd_ident}")
+    }
+}
+
 impl FunctionDeclaration {
     pub fn set_name(self, identifier: Identifier) -> Self {
         Self { identifier, domain: self.domain, codomain: self.codomain }
